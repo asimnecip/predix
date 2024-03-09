@@ -39,6 +39,31 @@ pub mod rehelloanchor {
 
         Ok(())
     }
+
+
+    // New function to allow participation in a post
+    pub fn participate_to_post(
+        ctx: Context<ParticipateToPost>,
+    ) -> Result<()> {
+        let post: &mut Account<Post> = &mut ctx.accounts.post;
+        let participant: &Signer = &ctx.accounts.participant;
+
+        /* // Check if the post is already finished
+        if post.post_finished {
+            return Err(ErrorCode::PostAlreadyFinished.into());
+        }
+
+        // Check if the participant is already in the post_participants list
+        if post.post_participants.contains(&participant.key()) {
+            return Err(ErrorCode::AlreadyParticipated.into());
+        }
+ */
+        // Add participant to the post
+        post.post_participants.push(participant.key());
+
+        Ok(())
+    }
+
 }
 
 #[derive(Accounts)]
@@ -95,4 +120,15 @@ pub enum ErrorCode {
     TopicTooLong,
     #[msg("The provided content should be 280 characters long maximum.")]
     ContentTooLong,
+}
+
+// --------------------------------------------------------CHATGPT-------------------------------------------------------------------- //
+// Context struct for participate_to_post
+#[derive(Accounts)]
+pub struct ParticipateToPost<'info> {
+    #[account(mut)]
+    pub post: Account<'info, Post>, // Post to participate in
+    #[account(mut)]
+    pub participant: Signer<'info>, // Participant
+    // System program declaration remains unchanged.
 }
