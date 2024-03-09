@@ -11,7 +11,7 @@ predix = "Apkfrh7Bo1UegJLS78fNsgpunbh5bA6LmZSpKVHJXSN6"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Localnet"
+cluster = "devnet"
 wallet = "/home/asimnecip/.config/solana/id.json"
 
 [scripts]
