@@ -36,3 +36,13 @@
     transform: rotate(360deg);
   }
 }
+
+a {
+  color: white;
+}
+.twitter-link {
+  color: "white";
+  font-size: "16px";
+  margin-top: "15px";
+  margin-bottom: "15px";
+}

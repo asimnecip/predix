@@ -1,8 +1,8 @@
 import React, { ReactNode, useCallback, useEffect, useState } from 'react';
 import Navbar from '../components/Navbar/Navbar';
 import Footer from '../components/Footer/Footer';
-// Removed the useDispatch import as we won't be using Redux actions
 import { useWallet } from '@solana/wallet-adapter-react';
+// Removed the useDispatch import as we won't be using Redux actions
 
 interface LayoutProps {
     children: ReactNode;

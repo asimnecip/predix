@@ -34,7 +34,7 @@ const WalletButton: React.FC = () => {
 
     const handleLogout = async () => {
         setIsOpen(false);
-        await disconnect();
+        /* await disconnect(); */
         navigate("/login");
     }
 
