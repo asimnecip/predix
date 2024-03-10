@@ -1,134 +1,148 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::system_program;
-use borsh::{BorshDeserialize, BorshSerialize};
+use anchor_lang::system_program;
 
-declare_id!("FWp2NxpzgK235TFK1HE96rbVNtXZ8U2oxwXMn3ptwu1A");
+// This is your program's public key and it will update
+// automatically when you build the project.
+declare_id!("DLpi4zr3TmBoR168KVi9xN2kw1b4WsP6DoKqzB4LSCR8");
 
 #[program]
-pub mod rehelloanchor {
+mod hello_anchor {
     use super::*;
 
-    pub fn create_post(
-        ctx: Context<CreatePost>,
-        topic: String,
-        content: String,
-        post_end_date: i64,
+    pub fn init_analyst(ctx: Context<InitAnalyst>) -> Result<()> {
+        let analyst = &ctx.accounts.analyst;
+        Ok(())
+    }
+
+    pub fn create_insight(
+        ctx: Context<CreateInsight>,
+        authority: Pubkey,
+        crypto_name: String,
+        encrypted_content: String,
+        timestamp: i64,
     ) -> Result<()> {
-        let post: &mut Account<Post> = &mut ctx.accounts.post;
-        let author: &Signer = &ctx.accounts.author;
-        let clock = Clock::get().unwrap();
+        let insight = &mut ctx.accounts.insight;
+        insight.crypto_name = crypto_name;
+        insight.encrypted_content = encrypted_content;
+        insight.timestamp = timestamp;
+        insight.validated = false;
+        Ok(())
+    }
 
-        // Char limit for strings
-        if topic.chars().count() > 50 {
-            return Err(ErrorCode::TopicTooLong.into());
-        }
-        if content.chars().count() > 280 {
-            return Err(ErrorCode::ContentTooLong.into());
-        }
-
-        post.author = author.key();
-        post.post_date = clock.unix_timestamp;
-        post.post_end_date = post_end_date;
-        post.topic = topic;
-        post.content = content;
-        post.post_init_bet = 0;
-        post.post_bet_pool = 0;
-        post.post_finished = false;
-
-        post.post_participants.push(author.key());
+    pub fn participate(ctx: Context<Participate>, participant_public_key: Pubkey) -> Result<()> {
+        // Assuming the actual decryption and verification to happen client-side
 
         Ok(())
     }
 
-
-    // New function to allow participation in a post
-    pub fn participate_to_post(
-        ctx: Context<ParticipateToPost>,
+    pub fn validate_insight(
+        ctx: Context<ValidateInsight>,
+        real_data: String,
+        post_id: u32,
     ) -> Result<()> {
-        let post: &mut Account<Post> = &mut ctx.accounts.post;
-        let participant: &Signer = &ctx.accounts.participant;
-
-        /* // Check if the post is already finished
-        if post.post_finished {
-            return Err(ErrorCode::PostAlreadyFinished.into());
-        }
-
-        // Check if the participant is already in the post_participants list
-        if post.post_participants.contains(&participant.key()) {
-            return Err(ErrorCode::AlreadyParticipated.into());
-        }
- */
-        // Add participant to the post
-        post.post_participants.push(participant.key());
-
+        let insight = &mut ctx.accounts.insight;
+        let analyst = &mut ctx.accounts.analyst;
+        /* if is_valid {
+            analyst.trust_points += 1; // Increment trust points for valid insights
+        } else {
+            analyst.trust_points = analyst.trust_points.saturating_sub(1); // Decrement trust points carefully to avoid underflow
+        } */
+        insight.validated = true;
         Ok(())
     }
 
+    
+
+    pub fn buy_post(ctx: Context<BuyPost>) -> Result<()> {
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
-pub struct CreatePost<'info> {
-    #[account(init, payer = author, space = Post::LEN)]
-    pub post: Account<'info, Post>,
+pub struct InitAnalyst<'info> {
     #[account(mut)]
-    pub author: Signer<'info>,
-    #[account(address = system_program::ID)]
-    /// CHECK: This is not dangerous because we don't read or write from this account
+    pub signer: Signer<'info>,
+
+    #[account(init, payer = signer, space = 1000)]
+    analyst: Account<'info, Analyst>,
     pub system_program: AccountInfo<'info>,
-    //ppub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct CreateInsight<'info> {
+    #[account(mut)]
+    pub signer: Signer<'info>,
+
+    #[account(init, payer = signer, space = 1000)]
+    pub insight: Account<'info, Insight>,
+    pub system_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct ValidateInsight<'info> {
+    #[account(mut, has_one = analyst)]
+    pub insight: Account<'info, Insight>,
+
+    #[account(mut)]
+    pub analyst: Account<'info, Analyst>,
+}
+
+
+
+#[derive(Accounts)]
+pub struct BuyPost {}
+
+#[derive(Accounts)]
+pub struct Participate<'info> {
+    #[account(mut)]
+    pub participant: Signer<'info>,
+
+    #[account(mut)]
+    pub insight: Account<'info, Insight>,
+    pub analyst: Account<'info, Analyst>,
+
+    #[account(init, payer = participant, space = 1000)]
+    pub participant_to_insight: Account<'info, ParticipantToInsight>,
+    pub system_program: AccountInfo<'info>,
+
+
 }
 
 #[account]
-pub struct Post {
-    pub author: Pubkey,                 //Post author
-    pub post_date: i64,                 //Post publish date
-    pub post_end_date: i64,             //Post end date
-    pub topic: String,                  //Post topic
-    pub content: String,                //Post content
-    pub post_init_bet: u64,             //Post init bet
-    pub post_bet_pool: u64,             //Post bet pool
-    pub post_finished: bool,            //Post finished?
-    pub post_participants: Vec<Pubkey>, //Post participants
+pub struct Analyst {
+    pub_key: Pubkey,
+    trust_point: u8,
+    insight_count: u8,
 }
 
-const DISCRIMINATOR_LENGTH: usize = 8;
-const PUBLIC_KEY_LENGTH: usize = 32;
-const TIMESTAMP_LENGTH: usize = 8;
-const STRING_LENGTH_PREFIX: usize = 4;
-const MAX_TOPIC_LENGTH: usize = 50 * 4;
-const MAX_CONTENT_LENGTH: usize = 280 * 4;
-const POST_BET_LENGTH: usize = 8;
-const POST_FINISHED_LENGTH: usize = 1;
-const POST_PARTICIPANTS_LENGTH: usize = 32 * 10;
-
-impl Post {
-    const LEN: usize = DISCRIMINATOR_LENGTH
-        + PUBLIC_KEY_LENGTH // Author.
-        + TIMESTAMP_LENGTH // Timestamp.
-        + TIMESTAMP_LENGTH // Timestamp.
-        + STRING_LENGTH_PREFIX + MAX_TOPIC_LENGTH // Topic.
-        + STRING_LENGTH_PREFIX + MAX_CONTENT_LENGTH // Content.
-        + POST_BET_LENGTH // Post date.
-        + POST_BET_LENGTH // Post bet pool.
-        + POST_FINISHED_LENGTH // Post status.
-        + POST_PARTICIPANTS_LENGTH;
+impl Analyst {
+    pub fn init_auth(&mut self) {
+        self.insight_count = 0;
+        self.trust_point = 0;
+    }
 }
 
-#[error_code]
-pub enum ErrorCode {
-    #[msg("The provided topic should be 50 characters long maximum.")]
-    TopicTooLong,
-    #[msg("The provided content should be 280 characters long maximum.")]
-    ContentTooLong,
+#[account]
+pub struct Insight {
+    pub insight_id: u32,
+    pub analyst: Pubkey,
+    pub encrypted_content: String,
+    pub crypto_name: String,
+    pub timestamp: i64,
+    pub validated: bool,
 }
 
-// --------------------------------------------------------CHATGPT-------------------------------------------------------------------- //
-// Context struct for participate_to_post
-#[derive(Accounts)]
-pub struct ParticipateToPost<'info> {
-    #[account(mut)]
-    pub post: Account<'info, Post>, // Post to participate in
-    #[account(mut)]
-    pub participant: Signer<'info>, // Participant
-    // System program declaration remains unchanged.
+impl Insight {
+    pub fn init(&mut self) {
+        self.validated = false;
+        let clock = Clock::get().unwrap();
+        self.timestamp = clock.unix_timestamp;
+    }
+}
+
+#[account]
+pub struct ParticipantToInsight {
+    participant: Pubkey,
+    analyst_pubkey: Pubkey,
+    encrypted_content: String,
 }
